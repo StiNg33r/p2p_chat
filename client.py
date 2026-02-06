@@ -5,10 +5,11 @@ import os
 
 UDP_MAX_SIZE = 65535
 
+commands = ["/connect", "/members"]
 
 def listen(s: socket.socket, host: str, port: int):
     while True:
-        msg, addr = s.recv(UDP_MAX_SIZE)
+        msg, addr = s.recvfrom(UDP_MAX_SIZE)
         msg_port = addr[-1]
         msg = msg.decode("ascii")
         allowed_ports = threading.current_thread().allowed_ports
@@ -21,9 +22,9 @@ def listen(s: socket.socket, host: str, port: int):
             if command == "members":
                 for n, member in enumerate(content.split(";"), start=1):
                     print('\r\r' + f"{n}: {member}" + "\n" + "you: ", end='')
-            else:
-                peer_name = f"client{msg_port}"
-                print('\r\r' + f"{peer_name}: " + msg + "\n" + "you: ", end='')
+        else:
+            peer_name = f"client{msg_port}"
+            print('\r\r' + f"{peer_name}: " + msg + "\n" + "you: ", end='')
         # print('\r\r' + msg.decode('ascii') + '\n' + f'you: ', end='')
 
 def start_listen(target, socket, host, port):
@@ -31,7 +32,7 @@ def start_listen(target, socket, host, port):
     th.start()
     return th
 
-def connect(host: str = '0.0.0.0', port: int = 3000):
+def connect(host: str = '127.0.0.1', port: int = 3000):
     own_port = random.randint(8000, 9000)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind((host, own_port))
@@ -50,14 +51,16 @@ def connect(host: str = '0.0.0.0', port: int = 3000):
 
     while True:
         msg = input(f'you: ')
-
         command = msg.split(' ')[0]
-        if msg == "/members":
-            s.sendto("__members".encode("ascii"), sendto)
-        if msg.startswith("/connect"):
-            peer = msg.split(' ')[-1]
-            peer_port = int(peer.replace('client', ''))
-            allowed_ports.append(peer_port)
+        if command in commands:
+            if msg == "/members":
+                s.sendto("__members".encode("ascii"), sendto)
+            if msg.startswith("/connect"):
+                peer = msg.split(' ')[-1]
+                peer_port = int(peer.replace('client', ''))
+                allowed_ports.append(peer_port)
+                sendto = (host, peer_port)
+                print(f"Connect to {peer_port}")
         else:
             s.sendto(msg.encode("ascii"), sendto)
 
