@@ -2,10 +2,11 @@ import socket
 import threading
 import random
 import os
+from config import SERVER_IP
 
 UDP_MAX_SIZE = 65535
 
-commands = ["/connect", "/members"]
+commands = ["/connect", "/members", "/add"]
 
 def listen(s: socket.socket, host: str, port: int):
     while True:
@@ -32,14 +33,17 @@ def start_listen(target, socket, host, port):
     th.start()
     return th
 
-def connect(host: str = '127.0.0.1', port: int = 3000):
+
+def connect(host: str = SERVER_IP, port: int = 3000):
     own_port = random.randint(8000, 9000)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind((host, own_port))
+    # s.bind((host, own_port))
+    s.bind(('0.0.0.0', own_port))
     listen_thread = start_listen(listen, s, host, port)
     allowed_ports = [port]
     listen_thread.allowed_ports = allowed_ports
     sendto = (host, port)
+
     s.sendto("__join".encode("ascii"), sendto)
 
 
@@ -55,11 +59,14 @@ def connect(host: str = '127.0.0.1', port: int = 3000):
         if command in commands:
             if msg == "/members":
                 s.sendto("__members".encode("ascii"), sendto)
+            if msg == "/add":
+                print(sendto)
             if msg.startswith("/connect"):
                 peer = msg.split(' ')[-1]
+                new_host = msg.split(' ')[-2]
                 peer_port = int(peer.replace('client', ''))
                 allowed_ports.append(peer_port)
-                sendto = (host, peer_port)
+                sendto = (new_host, peer_port)
                 print(f"Connect to {peer_port}")
         else:
             s.sendto(msg.encode("ascii"), sendto)
